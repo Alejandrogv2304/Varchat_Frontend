@@ -6,12 +6,13 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { paths } from '@/config/paths';
 
 import { api } from './api-client';
+import { getAccessToken } from './auth-session';
 
 export type User = {
   id: string;
   name: string;
   email: string;
-  role?: string;
+  username: string;
 };
 
 const userQueryKey = ['user'] as const;
@@ -24,6 +25,7 @@ const getUser = async (): Promise<User> => {
 export const getUserQueryOptions = () => ({
   queryKey: userQueryKey,
   queryFn: getUser,
+  enabled: Boolean(getAccessToken()),
   retry: false,
   refetchOnWindowFocus: false,
 });
@@ -45,7 +47,7 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  if (!user.data) {
+  if (!getAccessToken() || !user.data) {
     return <Navigate to={paths.auth.login.getHref(location.pathname)} replace />;
   }
 
