@@ -28,7 +28,7 @@ export function DashboardLayout({ children }: PropsWithChildren) {
             }
             to={paths.app.dashboard.getHref()}
           >
-            Dashboard
+            Inicio
           </NavLink>
           <NavLink
             className={({ isActive }) =>
@@ -41,7 +41,7 @@ export function DashboardLayout({ children }: PropsWithChildren) {
             }
             to={paths.app.profile.getHref()}
           >
-            Profile
+            Perfil
           </NavLink>
         </nav>
       </aside>
@@ -62,7 +62,7 @@ export function DashboardLayout({ children }: PropsWithChildren) {
               className="rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               to={paths.home.getHref()}
             >
-              Public home
+              Información
             </Link>
           </div>
         </header>
