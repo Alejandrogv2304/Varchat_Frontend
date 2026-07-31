@@ -1,29 +1,33 @@
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { AuthLayout } from '@/components/layouts';
 import { paths } from '@/config/paths';
-import { useForm } from 'react-hook-form';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { isAxiosError } from 'axios';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
-import { setAccessToken } from '@/lib/auth-session';
-import { queryClient } from '@/lib/react-query';
+import { useForm } from 'react-hook-form';
 import { registerSchema } from './register.schema';
 import type { RegisterForm } from './register.schema';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+
+type UsernameCheckResponse = {
+  username: string;
+  available: boolean;
+  message: string;
+};
 
 export default function RegisterPage() {
-    const [visible, setVisible] = useState(false);
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-
-  const redirectTo = searchParams.get('redirectTo');
-  const destination = redirectTo ? decodeURIComponent(redirectTo) : paths.auth.login.getHref();
+  const [visible, setVisible] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [debouncedUsername, setDebouncedUsername] = useState('');
 
   const {
     register,
     handleSubmit,
+    reset,
+    watch,
     setError,
     formState: { errors },
   } = useForm<RegisterForm>({
@@ -36,15 +40,43 @@ export default function RegisterPage() {
     },
   });
 
+  const usernameValue = watch('username');
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedUsername(usernameValue.trim());
+    }, 1500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [usernameValue]);
+
+  const usernameCheckQuery = useQuery({
+    queryKey: ['username-check', debouncedUsername],
+    queryFn: async (): Promise<UsernameCheckResponse> => {
+      const response = await api.get('/users/check-username', {
+        params: { username: debouncedUsername },
+      });
+
+      return response.data as UsernameCheckResponse;
+    },
+    enabled: debouncedUsername.length >= 3,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
   const registerMutation = useMutation({
     mutationFn: async (formData: RegisterForm) => {
       const response = await api.post('/auth/register', formData);
       return response.data;
     },
-    onSuccess: async (data: { accessToken: string; user: { id: string; name: string; email: string; username: string } }) => {
-      setAccessToken(data.accessToken);
-      queryClient.setQueryData(['user'], data.user);
-      navigate(destination, { replace: true });
+    onSuccess: (data: { message: string }) => {
+      setSuccessMessage(data.message);
+      reset({
+        correo: '',
+        username: '',
+        nombre: '',
+        password: '',
+      });
     },
     onError: (error) => {
       let message = 'No se pudo registrar el usuario';
@@ -70,7 +102,14 @@ export default function RegisterPage() {
     
     <AuthLayout title="Crea tu cuenta">
       <div className="rounded-2xl border border-border bg-card p-6 text-card-foreground">
-       
+        {successMessage ? (
+          <div
+            className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-primary"
+            role="status"
+          >
+            {successMessage}
+          </div>
+        ) : null}
 
         <form className="mt-6 space-y-5" onSubmit={handleSubmit(handleRegister)} noValidate>
           {errors.root?.message ? (
@@ -94,6 +133,48 @@ export default function RegisterPage() {
             {errors.correo ? <p className="text-sm text-destructive">{errors.correo.message}</p> : null}
           </div>
 
+          {/* Div del username */}
+          <div className="space-y-2">
+            <label htmlFor="username" className="text-sm font-medium text-card-foreground">
+              Username
+            </label>
+            <input
+              id="username"
+              type="text"
+              placeholder="CharlieFlow"
+              autoComplete="username"
+              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-3 text-foreground outline-none transition-colors placeholder:text-muted-foreground hover:border-primary/60 focus:border-primary"
+              {...register('username')}
+            />
+            {errors.username ? <p className="text-sm text-destructive">{errors.username.message}</p> : null}
+            {usernameCheckQuery.data ? (
+              <p
+                className={`text-sm ${
+                  usernameCheckQuery.data.available ? 'text-primary' : 'text-destructive'
+                }`}
+                role="status"
+              >
+                {usernameCheckQuery.data.message}
+              </p>
+            ) : null}
+          </div>
+          {/* Div del nombre */}
+
+          <div className="space-y-2">
+            <label htmlFor="nombre" className="text-sm font-medium text-card-foreground">
+              Nombre
+            </label>
+            <input
+              id="nombre"
+              type="text"
+              placeholder="Alejandro"
+              autoComplete="name"
+              className="mt-1 w-full rounded-xl border border-input bg-background px-4 py-3 text-foreground outline-none transition-colors placeholder:text-muted-foreground hover:border-primary/60 focus:border-primary"
+              {...register('nombre')}
+            />
+            {errors.nombre ? <p className="text-sm text-destructive">{errors.nombre.message}</p> : null}
+          </div>
+
           <div className="space-y-3">
             <label htmlFor="password" className="text-sm font-medium text-card-foreground">
               Contraseña
@@ -103,7 +184,7 @@ export default function RegisterPage() {
                 id="password"
                 type={visible ? 'text' : 'password'}
                 placeholder="*******"
-                autoComplete="current-password"
+                autoComplete="new-password"
                 className="w-full bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
                 {...register('password')}
               />
@@ -119,20 +200,20 @@ export default function RegisterPage() {
             {errors.password ? <p className="text-sm text-destructive">{errors.password.message}</p> : null}
           </div>
 
-          <button
+            <button
             type="submit"
-            disabled={loginMutation.isPending}
+            disabled={registerMutation.isPending}
             className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {loginMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : null}
-            {loginMutation.isPending ? 'Ingresando...' : 'Iniciar sesión'}
+            {registerMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : null}
+            {registerMutation.isPending ? 'Registrando...' : 'Registrar'}
           </button>
         </form>
 
         <div className="mt-6 text-sm text-muted-foreground">
-          <span>¿No tienes cuenta? </span>
-          <Link className="font-semibold text-primary transition-colors hover:opacity-80" to={paths.auth.register.getHref()}>
-            Regístrate
+          <span>¿Ya tienes cuenta? </span>
+          <Link className="font-semibold text-primary transition-colors hover:opacity-80" to={paths.auth.login.getHref()}>
+            Inicia sesión
           </Link>
         </div>
       </div>
