@@ -135,6 +135,12 @@ export default function LoginPage() {
             Regístrate
           </Link>
         </div>
+         <div className="mt-6 text-sm text-muted-foreground">
+          <span>Olvidaste </span>
+          <Link className="font-semibold text-primary transition-colors hover:opacity-80" to={paths.auth.forgotPassword.getHref()}>
+            tu contraseña?
+          </Link>
+        </div>
       </div>
     </AuthLayout>
   );

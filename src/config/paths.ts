@@ -14,6 +14,11 @@ export const paths = {
       getHref: (redirectTo?: string | null | undefined) =>
         `/auth/register${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ''}`,
     },
+    forgotPassword: {
+      path: '/auth/forgot-password',
+      getHref: (redirectTo?: string | null | undefined) =>
+        `/auth/forgot-password${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ''}`,
+    },
   },
   app: {
     root: {

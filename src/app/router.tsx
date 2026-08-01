@@ -10,6 +10,7 @@ import DashboardPage from './routes/app/dashboard';
 import ProfilePage from './routes/app/profile';
 import HomePage from './routes/home';
 import NotFoundPage from './routes/not-found';
+import ForgotPasswordPage from './routes/auth/forgotPassword';
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
   {
     path: paths.auth.register.path,
     element: <RegisterPage />,
+  },
+  {
+    path: paths.auth.forgotPassword.path,
+    element: <ForgotPasswordPage />,
   },
   {
     path: paths.app.root.path,
